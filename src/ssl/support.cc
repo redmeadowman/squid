@@ -651,19 +651,6 @@ Ssl::GetX509Fingerprint(X509 * cert, const char *)
     return buf;
 }
 
-SBuf
-Ssl::GetX509PEM(X509 * cert)
-{
-    assert(cert);
-
-    Ssl::BIO_Pointer bio(BIO_new(BIO_s_mem()));
-    PEM_write_bio_X509(bio.get(), cert);
-
-    char *ptr;
-    const auto len = BIO_get_mem_data(bio.get(), &ptr);
-    return SBuf(ptr, len);
-}
-
 /// \ingroup ServerProtocolSSLInternal
 const char *
 Ssl::GetX509CAAttribute(X509 * cert, const char *attribute_name)
@@ -714,37 +701,80 @@ sslGetUserEmail(SSL * ssl)
     return sslGetUserAttribute(ssl, "emailAddress");
 }
 
-SBuf
+const char *
 sslGetUserCertificatePEM(SSL *ssl)
 {
-    assert(ssl);
+    X509 *cert;
+    BIO *mem;
+    static char *str = NULL;
+    char *ptr;
+    long len;
 
-    if (const auto cert = SSL_get_peer_certificate(ssl))
-        return Ssl::GetX509PEM(cert);
+    safe_free(str);
 
-    return SBuf();
+    if (!ssl)
+        return NULL;
+
+    cert = SSL_get_peer_certificate(ssl);
+
+    if (!cert)
+        return NULL;
+
+    mem = BIO_new(BIO_s_mem());
+
+    PEM_write_bio_X509(mem, cert);
+
+    len = BIO_get_mem_data(mem, &ptr);
+
+    str = (char *)xmalloc(len + 1);
+
+    memcpy(str, ptr, len);
+
+    str[len] = '\0';
+
+    X509_free(cert);
+
+    BIO_free(mem);
+
+    return str;
 }
 
-SBuf
+const char *
 sslGetUserCertificateChainPEM(SSL *ssl)
 {
-    assert(ssl);
+    STACK_OF(X509) *chain;
+    BIO *mem;
+    static char *str = NULL;
+    char *ptr;
+    long len;
+    int i;
 
-    auto chain = SSL_get_peer_cert_chain(ssl);
+    safe_free(str);
+
+    if (!ssl)
+        return NULL;
+
+    chain = SSL_get_peer_cert_chain(ssl);
 
     if (!chain)
         return sslGetUserCertificatePEM(ssl);
 
-    Ssl::BIO_Pointer bio(BIO_new(BIO_s_mem()));
+    mem = BIO_new(BIO_s_mem());
 
-    for (int i = 0; i < sk_X509_num(chain); ++i) {
+    for (i = 0; i < sk_X509_num(chain); ++i) {
         X509 *cert = sk_X509_value(chain, i);
-        PEM_write_bio_X509(bio.get(), cert);
+        PEM_write_bio_X509(mem, cert);
     }
 
-    char *ptr;
-    const auto len = BIO_get_mem_data(bio.get(), &ptr);
-    return SBuf(ptr, len);
+    len = BIO_get_mem_data(mem, &ptr);
+
+    str = (char *)xmalloc(len + 1);
+    memcpy(str, ptr, len);
+    str[len] = '\0';
+
+    BIO_free(mem);
+
+    return str;
 }
 
 /// Create SSL context and apply ssl certificate and private key to it.

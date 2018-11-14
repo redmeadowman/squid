@@ -103,25 +103,21 @@ const char *sslGetUserAttribute(SSL *ssl, const char *attribute_name);
 const char *sslGetCAAttribute(SSL *ssl, const char *attribute_name);
 
 /// \ingroup ServerProtocolSSLAPI
-SBuf sslGetUserCertificatePEM(SSL *ssl);
+const char *sslGetUserCertificatePEM(SSL *ssl);
 
 /// \ingroup ServerProtocolSSLAPI
-SBuf sslGetUserCertificateChainPEM(SSL *ssl);
+const char *sslGetUserCertificateChainPEM(SSL *ssl);
 
 namespace Ssl
 {
 /// \ingroup ServerProtocolSSLAPI
 typedef char const *GETX509ATTRIBUTE(X509 *, const char *);
-typedef SBuf GETX509PEM(X509 *);
 
 /// \ingroup ServerProtocolSSLAPI
 GETX509ATTRIBUTE GetX509UserAttribute;
 
 /// \ingroup ServerProtocolSSLAPI
 GETX509ATTRIBUTE GetX509CAAttribute;
-
-/// \ingroup ServerProtocolSSLAPI
-GETX509PEM GetX509PEM;
 
 /// \ingroup ServerProtocolSSLAPI
 GETX509ATTRIBUTE GetX509Fingerprint;
